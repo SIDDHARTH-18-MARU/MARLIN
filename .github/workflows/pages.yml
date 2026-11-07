@@ -1,0 +1,117 @@
+name: Validate MARLIN and deploy Pages
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish this verified main revision to GitHub Pages
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          package-manager-cache: false
+      - name: Verify source inventory
+        run: node scripts/verify-release.mjs source
+      - name: Install and verify secret scanner
+        shell: bash
+        run: |
+          tool="$(mktemp -d)"
+          archive="$tool/gitleaks.tar.gz"
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location --max-time 60 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o "$archive"
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$tool" gitleaks
+          "$tool/gitleaks" version
+          echo "$tool" >> "$GITHUB_PATH"
+      - name: Scan source without logging secret values
+        run: gitleaks dir . --redact=100 --ignore-gitleaks-allow --no-banner
+      - name: Install exact app and browser QA locks
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix qa --ignore-scripts
+      - name: Check dependency advisories
+        run: |
+          npm audit --audit-level=low
+          npm audit --prefix qa --audit-level=low
+      - name: Lint, typecheck and test
+        run: |
+          npm run lint
+          npm exec -- tsc -b
+          npm test
+      - name: Build Pages and root variants
+        run: |
+          npm run build -- --base=/MARLIN/
+          npm run build -- --outDir=.private/root-check
+          node scripts/verify-release.mjs source
+          node scripts/verify-release.mjs artifact dist
+      - name: Scan the exact Pages artifact
+        run: gitleaks dir dist --redact=100 --ignore-gitleaks-allow --no-banner
+      - name: Install locked Playwright browsers
+        run: node qa/node_modules/playwright/cli.js install --with-deps firefox webkit
+      - name: Check the runner's Chrome
+        run: google-chrome --version
+      - name: Test root and exact Pages artifact
+        run: |
+          node qa/marlin-smoke.mjs chromium .private/root-check / approve
+          node qa/marlin-smoke.mjs chromium dist /MARLIN/ reject
+          node qa/marlin-smoke.mjs firefox dist /MARLIN/ approve
+          node qa/marlin-smoke.mjs webkit dist /MARLIN/ reject
+          node qa/mobile-bridge.mjs dist /MARLIN/
+      - name: Verify artifact and explicit release configuration
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          PAGES_ENABLED: ${{ vars.MARLIN_PAGES_ENABLED }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REPO_NAME" = MARLIN
+          test "$PAGES_ENABLED" = true
+          test -s LICENSE
+          git ls-files --error-unmatch LICENSE
+          node scripts/verify-release.mjs source
+          node scripts/verify-release.mjs artifact dist
+      - name: Upload only the verified static artifact
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+          retention-days: 7
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main' && vars.MARLIN_PAGES_ENABLED == 'true'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the verified artifact from this workflow run
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,139 @@
+@import "tailwindcss" source(none);
+@source ".";
+
+@theme {
+  /* Maritime operations-center palette */
+  --color-abyss: #05080d;
+  --color-hull-950: #070c14;
+  --color-hull-900: #0a121d;
+  --color-hull-850: #0d1726;
+  --color-hull-800: #101d2e;
+  --color-hull-700: #16283e;
+  --color-hull-600: #1f3652;
+  --color-hull-500: #2c4a6b;
+  --color-hull-400: #4a6a8a;
+  --color-hull-300: #7a95ac;
+
+  --color-cyan-glow: #33d6e0;
+  --color-cyan-mid: #22b8c4;
+  --color-cyan-dim: #1a8791;
+
+  --color-ok: #33cc7a;
+  --color-info: #3aa0ff;
+  --color-warn: #f2b53d;
+  --color-crit: #ff4d4f;
+
+  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Captain-bridge aliases.
+     The bridge was authored against its own palette; rather than rewrite every
+     className, map its token names onto the operations-center palette above so
+     both faces stay one visual language. Edit the hull/cyan/status tokens and
+     the bridge follows. */
+  --color-deep: #070c14;      /* hull-950 */
+  --color-steel: #2c4a6b;     /* hull-500 */
+  --color-mist: #7a95ac;      /* hull-300 */
+  --color-chalk: #dce6ee;     /* body text */
+  --color-signal: #33d6e0;    /* cyan-glow */
+  --color-calm: #33cc7a;      /* ok */
+  --color-caution: #f2b53d;   /* warn */
+  --color-alarm: #ff8a3d;     /* between warn and crit */
+  --color-critical: #ff4d4f;  /* crit */
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--color-abyss);
+    color: #dce6ee;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-hull-500);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-hull-400);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan-glow);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: linear-gradient(180deg, rgba(13, 23, 38, 0.88), rgba(7, 12, 20, 0.92));
+    border: 1px solid rgba(74, 106, 138, 0.25);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .mono-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Captain-bridge utilities (see the token aliases in @theme). */
+  .glass {
+    background: linear-gradient(180deg, rgba(13, 23, 38, 0.88), rgba(7, 12, 20, 0.92));
+    border: 1px solid rgba(74, 106, 138, 0.25);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .pulse-alarm {
+    animation: pulse-alarm 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-alarm {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 138, 61, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 138, 61, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-alarm { animation: none; }
+}
+
+/* Cesium widget overrides so it disappears into the dark shell */
+.cesium-viewer-bottom {
+  display: none !important;
+}
+.cesium-widget-credits {
+  display: none !important;
+}
