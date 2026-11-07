@@ -6,7 +6,7 @@ MARLIN (Maritime Adaptive Risk-aware Logistics & Intelligent Navigation) is a br
 
 ![Command Center showing synthetic voyage telemetry and candidate routes across the Indian Ocean](docs/screenshots/command-center.png)
 
-The [fixed demo](#try-a-voyage) covers planning, shared shore and bridge controls, a reroute decision, arrival, replay and JSON export. A GitHub Pages demo is planned; there is no verified public URL yet. See [credits](CONTRIBUTORS.md) and [notices](NOTICE.md).
+The [fixed demo](#try-a-voyage) covers planning, shared shore and bridge controls, a reroute decision, arrival, replay and JSON export. Try the [live MARLIN demo](https://siddharth-18-maru.github.io/MARLIN/). See [credits](CONTRIBUTORS.md) and [notices](NOTICE.md).
 
 ## Run locally
 
